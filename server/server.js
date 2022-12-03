@@ -1,6 +1,7 @@
 const express = require('express');
 //const { Server } = require("socket.io");
 const teacher = require('./routes/teacher');
+const user = require('./routes/user')
 // const productRouter = require('./routes/product');
 // const catRouter = require('./routes/cat');
 // const imageRouter = require('./routes/image');
@@ -65,6 +66,7 @@ app.post('/', (req, res) =>{
 )
 })
 app.use("/teacher", teacher);
+app.use("/user", user);
 // app.use("/product", productRouter);
 // app.use("/cat", catRouter);
 // app.use("/image", imageRouter)
