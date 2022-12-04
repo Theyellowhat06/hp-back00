@@ -49,17 +49,20 @@ router.get('/schedule', (req, res) => {
             var data = [];
             for(let day = 1; day <= 7; day++){
                     
-                var sql = `select name_, subject_code, (select number_ from class where id = class_id) as class_number, part_time, if(type_ = 1, 'Лекц', 'Лаб') as type_ 
+                var sql = `select name_, subject_code, (select number_ from class where id = class_id) as class_number, part_time, type_ 
                 from users_pt as up cross join part_time as pt cross join subjects as s 
                 where up.part_time_id = pt.id and pt.subject_code = s.code_ and up.user_code = '${req.query.teacher_id}' and pt.week_day = ${day};`
                 con.query(sql, (err, rs, fields) => {
                     var subjects = [];
                     const rows = new Promise((resolve, rejects) => {
                         rs.forEach((element, ind, array)=>{
+                            let class_type = 'Лекц'
+                            if(element.type_ == 2) class_type = 'Лаборатор'
+                            if(element.type_ == 3) class_type = 'Семинар'
                             subjects.push({
                                 code: element.subject_code,
                                 name: element.name_,
-                                class_type: element.type_,
+                                class_type: class_type,
                                 part_time: element.part_time,
                                 class_number: element.class_number
                             });
