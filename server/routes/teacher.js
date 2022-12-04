@@ -61,6 +61,7 @@ router.get('/schedule', (req, res) => {
                                 name: element.name_,
                                 class_type: element.type_,
                                 part_time: element.part_time,
+                                class_number: element.class_number
                             });
                             if(ind === array.length - 1) resolve()
                         });
@@ -108,6 +109,7 @@ router.get('/classes', (req, res) => {
             jwt.verify(token, key)
             var sql = `select distinct subject_code, (select name_ from subjects where code_ = p.subject_code) as subject_name from part_time p cross join users_pt u where u.part_time_id = p.id and u.user_code = '${req.query.teacher_id}';`
             con.query(sql, (err, rs, fields) => {
+                //console.log(rs)
                 var subjects = [];
                 const rows = new Promise((resolve, rejects) => {
                     rs.forEach((element, ind, array)=>{
