@@ -184,7 +184,8 @@ router.get('/class-attendance', (req, res) => {
                         AND a.part_time = pt.part_time
                         AND semester_week = ${ss.escape(req.query.semester_week)}
                 ORDER BY created_at DESC
-                LIMIT 1), '%H:%i:%s') AS created_at
+                LIMIT 1), '%H:%i:%s') AS created_at,
+                (select wp.status_ from week_pt wp where wp.users_pt_id = upt.id and wp.week_semester = ${ss.escape(req.query.semester_week)}) as rstatus
         FROM
             part_time pt
                 CROSS JOIN
@@ -209,6 +210,7 @@ router.get('/class-attendance', (req, res) => {
                         AND ipt.week_day = pt.week_day
                         AND ipt.part_time = pt.part_time
                         AND iupt.user_code = ${ss.escape(req.query.teacher_id)});`
+                        console.log(sql)
             con.query(sql, (err, rs, fields) => {
                 var attendance = [];
                 var total_students = rs.length
@@ -220,8 +222,8 @@ router.get('/class-attendance', (req, res) => {
                     rs.forEach((element, ind, array) =>{
                         if(element.created_at == null){
                             var stts = 0
-                            if(element.status_ != null){
-                                stts = element.status
+                            if(element.rstatus != null){
+                                stts = element.rstatus
                             }
                             if(stts == 0) total_absent++;
                             if(stts == 1) total_present++;
@@ -314,61 +316,164 @@ router.get('/class-attendance-semester-report', (req, res) => {
                         AND ipt.week_day = pt.week_day
                         AND ipt.part_time = pt.part_time
                         AND iupt.user_code = ${ss.escape(req.query.teacher_id)});`
+                        console.log(sql)
             con.query(sql, (err, rs, fields) => {
-                var attendance = [];
-                var total_students = rs.length
-                var total_absent = 0
-                var total_present = 0
-                var total_sick = 0
-                var total_free = 0
-                rs.forEach((element) =>{
-                    if(element.created_at == null){
-                        var stts = 0
-                        if(element.status_ != null){
-                            stts = element.status
-                        }
-                        if(stts == 0) total_absent++;
-                        if(stts == 1) total_present++;
-                        if(stts == 2) total_sick++;
-                        if(stts == 3) total_free++;
-                        attendance.push({
-                            student_id: element.user_code,
-                            student_lname: element.lname,
-                            student_fname: element.fname,
-                            status: stts,
-                            time: element.created_at,
-                            updated_at: "19:20:45"
+                var data = []
+                const rows = new Promise((resolve, rejects) => {
+                    
+                    rs.forEach((element, ind, array)=>{
+                        sql = `select * from week_pt where users_pt_id = ${element.id}`
+                        console.log(sql)
+                        var attendance = [];
+                        con.query(sql, (err, rs, fields) => {
+                            console.log(rs)
+                            const inrows = new Promise((resolve, rejects)=>{
+                                if(rs.length > 0){
+                                    rs.forEach((element, ind, array)=>{
+                                        attendance.push({
+                                            week: element.week_semester,
+                                            status: element.status_
+                                        })
+                                        if(ind === array.length - 1) resolve()
+                                    })
+                                }else{
+                                    resolve()
+                                }
+                            })
+                            inrows.then(()=>{
+                                console.log(attendance)
+                                var semester_week = getWeeksDiff(new Date())
+                                if(semester_week > 16) semester_week = 16
+                                data.push({
+                                    student_id: element.user_code,
+                                    student_lname: element.lname,
+                                    student_fname: element.fname,
+                                    total_attendance: semester_week,
+                                    attendance: attendance
+                                })
+                                console.log(ind+' '+array.length)
+                                if(ind === array.length - 1) resolve()
+                            })
                         })
-                    }else{
-                        total_present++;
-                        attendance.push({
-                            student_id: element.user_code,
-                            student_lname: element.lname,
-                            student_fname: element.fname,
-                            status: 1,
-                            time: element.created_at,
-                            updated_at: ""
-                        })
-                    }
-                })
-
-                res.status(200).json({
-                        success: true,
-                        data: {
-                            total_students: total_students,
-                            total_absent: total_absent,
-                            total_present: total_present,
-                            total_sick: total_sick,
-                            total_free: total_free,
-                            attendance: attendance
-                        }
                     })
+                })
+                rows.then(()=>{
+                    //console.log('passs')
+                    res.status(200).json({
+                        success: true,
+                        data: data
+                    })
+                })  
             })
         }catch(e){
             console.error(e)
             res.status(401).json({
                 success: false,
                 msg: "Permission denied"
+            })
+        }
+    }
+})
+
+router.post('/update-student-attendance-status', (req, res) => {
+    if(!('authorization' in req.headers)){
+        res.json({
+            success: false,
+            msg: "Хандах эрхгүй байна"
+        })
+    }else{
+        try{
+            const token = req.headers.authorization.split(' ')[1]
+            jwt.verify(token, key)
+            var sql = `SELECT 
+                            pt.id,
+                            pt.subject_code
+                        FROM
+                            part_time pt
+                                CROSS JOIN
+                            users_pt upt
+                        WHERE
+                            pt.id = upt.part_time_id
+                                AND pt.week_day = ${ss.escape(req.body.week_day)}
+                                AND pt.part_time = ${ss.escape(req.body.part_time)}
+                                AND upt.user_code = ${ss.escape(req.body.teacher_id)}
+                                AND pt.subject_code = ${ss.escape(req.body.subject_id)}`
+                        console.log(sql)
+            con.query(sql, (err, rs, fields) => {
+                console.log(rs)
+                if(rs.length > 0){
+                    var sql = `SELECT 
+                                    *,
+                                    (SELECT 
+                                            status_
+                                        FROM
+                                            week_pt
+                                        WHERE
+                                            users_pt_id = upt.id
+                                                AND week_semester = ${ss.escape(req.body.semester_week)}) AS status_
+                                FROM
+                                    users_pt upt
+                                WHERE
+                                    upt.part_time_id = ${rs[0].id}
+                                        AND upt.user_code = ${ss.escape(req.body.student_id)}`
+                                        console.log(sql)
+                    con.query(sql, (err, rs, fields) => {
+                        console.log(rs)
+                        if(rs.length > 0){
+                            console.log(rs[0])
+                            if(rs[0].status_ != null){
+                                sql = `update week_pt set status_ = ${ss.escape(req.body.status_updated)} where users_pt_id = ${rs[0].id} and week_semester = ${ss.escape(req.body.semester_week)}`
+                                console.log(sql)
+                                con.query(sql, (err, rs, fields) => {
+                                    if(err){
+                                        res.json({
+                                            success: false,
+                                            msg: "Парамер буруу байна"
+                                        })
+                                    }else{
+                                        res.json({
+                                            success: true,
+                                            msg: "Амжилттай"
+                                        })
+                                    }
+                                })
+                            }else{
+                                sql = `insert into week_pt(users_pt_id, week_semester, status_, updated_at) 
+                                values (${rs[0].id}, ${ss.escape(req.body.semester_week)}, ${ss.escape(req.body.status_updated)}, current_timestamp());`
+                                con.query(sql, (err, rs, fields) => {
+                                    if(err){
+                                        res.json({
+                                            success: false,
+                                            msg: "Парамер буруу байна"
+                                        })
+                                    }else{
+                                        res.json({
+                                            success: true,
+                                            msg: "Амжилттай"
+                                        })
+                                    }
+                                })
+                            }
+                        }else{
+                            res.json({
+                                success: false,
+                                msg: "хичээл олдсонгүй"
+                            })
+                        }
+                    })
+                }else{
+                    res.json({
+                        success: false,
+                        msg: "Хандах эрхгүй байна"
+                    })
+                }
+                
+            })
+        }catch(e){
+            console.error(e)
+            res.json({
+                success: false,
+                msg: "Хандах эрхгүй байна"
             })
         }
     }
@@ -384,22 +489,24 @@ router.get('/semester-week', (req, res) => {
         try{
             // const token = req.headers.authorization.split(' ')[1]
             // jwt.verify(token, key)
-            var semester_week = getWeeksDiff(new Date('2022-8-22'), new Date());
+            var semester_week = getWeeksDiff(new Date());
+            if(semester_week > 16) semester_week = 16
             res.json({
                 success: true,
                 data: semester_week
             })
         }catch(e){
             console.error(e)
-            res.status(401).json({
+            res.json({
                 success: false,
-                msg: "Permission denied"
+                msg: "Хандах эрхгүй байна"
             })
         }
     // }
 })
 
-function getWeeksDiff(startDate, endDate) {
+function getWeeksDiff(endDate) {
+    var startDate = new Date('2022-8-22')
     const msInWeek = 1000 * 60 * 60 * 24 * 7;
   
     return Math.round(Math.abs(endDate - startDate) / msInWeek);
