@@ -38,6 +38,11 @@ router.post('/rfid', (req, res) => {
                         }
                         
                     })
+                }else{
+                    res.status(200).json({
+                        success: true,
+                        msg: 'RFID олдсонгүй'
+                    })
                 }
             })
         });
