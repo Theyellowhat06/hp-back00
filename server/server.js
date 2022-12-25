@@ -3,6 +3,7 @@ const express = require('express');
 const teacher = require('./routes/teacher');
 const user = require('./routes/user')
 const affairs = require('./routes/student-affairs')
+const attendance = require('./routes/attendance')
 // const productRouter = require('./routes/product');
 // const catRouter = require('./routes/cat');
 // const imageRouter = require('./routes/image');
@@ -70,6 +71,7 @@ app.post('/', (req, res) =>{
 app.use("/teacher", teacher);
 app.use("/user", user);
 app.use('/student-affairs',affairs)
+app.use('/attendance',attendance)
 // app.use("/product", productRouter);
 // app.use("/cat", catRouter);
 // app.use("/image", imageRouter)
