@@ -55,19 +55,24 @@ router.get('/schedule', (req, res) => {
                 con.query(sql, (err, rs, fields) => {
                     var subjects = [];
                     const rows = new Promise((resolve, rejects) => {
-                        rs.forEach((element, ind, array)=>{
-                            let class_type = 'Лекц'
-                            if(element.type_ == 2) class_type = 'Лаборатор'
-                            if(element.type_ == 3) class_type = 'Семинар'
-                            subjects.push({
-                                code: element.subject_code,
-                                name: element.name_,
-                                class_type: class_type,
-                                part_time: element.part_time,
-                                class_number: element.class_number
+                        if(rs.length > 1){
+                            rs.forEach((element, ind, array)=>{
+                                let class_type = 'Лекц'
+                                if(element.type_ == 2) class_type = 'Лаборатор'
+                                if(element.type_ == 3) class_type = 'Семинар'
+                                subjects.push({
+                                    code: element.subject_code,
+                                    name: element.name_,
+                                    class_type: class_type,
+                                    part_time: element.part_time,
+                                    class_number: element.class_number
+                                });
+                                if(ind === array.length - 1) resolve()
                             });
-                            if(ind === array.length - 1) resolve()
-                        });
+                        }else{
+                            resolve()
+                        }
+                        
                     })
                     rows.then(() => {
                         data.push({
