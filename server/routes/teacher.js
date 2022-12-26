@@ -79,14 +79,14 @@ router.get('/schedule', (req, res) => {
                             weekday: day,
                             Subjects: subjects
                         });
-                        if(day >= 5) {  
+                        if(day > 5) {  
                             res.status(200).json({
                                 success: true,
                                 data: data
                             })
                         }
                     })
-                    if(day >= 5){
+                    if(day > 5){
                         res.status(200).json({
                             success: true,
                             data: data
