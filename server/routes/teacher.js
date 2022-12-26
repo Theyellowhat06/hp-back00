@@ -47,7 +47,7 @@ router.get('/schedule', (req, res) => {
             const token = req.headers.authorization.split(' ')[1]
             jwt.verify(token, key)
             var data = [];
-            for(let day = 1; day <= 7; day++){
+            for(let day = 1; day <= 5; day++){
                     
                 var sql = `select name_, subject_code, (select number_ from class where id = class_id) as class_number, part_time, type_ 
                 from users_pt as up cross join part_time as pt cross join subjects as s 
@@ -79,14 +79,14 @@ router.get('/schedule', (req, res) => {
                             weekday: day,
                             Subjects: subjects
                         });
-                        if(day > 7) {  
+                        if(day >= 5) {  
                             res.status(200).json({
                                 success: true,
                                 data: data
                             })
                         }
                     })
-                    if(day >= 7){
+                    if(day >= 5){
                         res.status(200).json({
                             success: true,
                             data: data
