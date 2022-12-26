@@ -47,7 +47,7 @@ router.get('/schedule', (req, res) => {
             const token = req.headers.authorization.split(' ')[1]
             jwt.verify(token, key)
             var data = [];
-            for(let day = 1; day <= 5; day++){
+            for(let day = 1; day <= 6; day++){
                     
                 var sql = `select name_, subject_code, (select number_ from class where id = class_id) as class_number, part_time, type_ 
                 from users_pt as up cross join part_time as pt cross join subjects as s 
